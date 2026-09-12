@@ -199,7 +199,6 @@ form input {
     box-shadow: 0 0 8px rgba(11, 43, 94, 0.3);
 }
 
-/* ❌ Animación de error (Temblor) */
 .shake {
     animation: shake-animation 0.4s cubic-bezier(.36,.07,.19,.97) both;
 }
@@ -209,4 +208,44 @@ form input {
     20%, 80% { transform: translate3d(4px, 0, 0); }
     30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
     40%, 60% { transform: translate3d(6px, 0, 0); }
+}
+
+/* =========================================
+   🦴 ESQUELETO ANIMADO (SKELETON LOADER)
+   ========================================= */
+.skeleton-card {
+    background: white;
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 15px;
+}
+
+/* El reflejo de luz animado */
+.skeleton-card::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+    animation: shimmer 1.5s infinite;
+}
+
+.skeleton-line {
+    background: #E8E8E8;
+    border-radius: 6px;
+    margin-bottom: 10px;
+}
+
+.skeleton-title { height: 20px; width: 60%; }
+.skeleton-text { height: 14px; width: 40%; }
+.skeleton-text-small { height: 10px; width: 30%; margin-bottom: 15px;}
+.skeleton-btn { height: 40px; width: 100%; border-radius: 8px; margin-top: 15px; background: #F0F0F0; }
+
+@keyframes shimmer {
+    100% { left: 200%; }
 }
