@@ -9,8 +9,20 @@ const SUPABASE_URL = 'https://izmdeqtzezqhkgfcrqgl.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_eR7ts_4u-KFvH6p0BsTRfA_n2RmCCcQ';
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// 🔒 CONFIGURACIÓN DE PINES DE SEGURIDAD
+const PIN_ANDY = "1020";
+const PIN_VICTORIA = "3040";
+
 let usuarioActivo = localStorage.getItem('debt_mate_user') || 'Familia';
 let deudasGlobales = [];
+
+// 💰 NUEVA FUNCIÓN: Traductor de formato de moneda (Ej: 20.345,23)
+function formatearNumero(valor) {
+    return Number(valor).toLocaleString('es-ES', { 
+        minimumFractionDigits: 2, 
+        maximumFractionDigits: 2 
+    });
+}
 
 function obtenerPrimeraFechaPago(diaPago) {
     const hoy = new Date();
@@ -33,7 +45,6 @@ function obtenerSiguienteMes(fechaAnteriorISO, diaPago) {
     return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, '0') + "-" + String(d.getDate()).padStart(2, '0');
 }
 
-// Usamos la petición NATIVA del navegador
 function activarNotificaciones(usuario) {
     window.OneSignalDeferred.push(async function(OneSignal) {
         await OneSignal.User.addTag("perfil", usuario); 
@@ -42,7 +53,6 @@ function activarNotificaciones(usuario) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // 🌟 AQUÍ ESTÁ EL CAMBIO: Llama directamente al trabajador de OneSignal
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('OneSignalSDKWorker.js').catch(err => console.log(err));
     }
@@ -82,17 +92,85 @@ document.addEventListener('DOMContentLoaded', async () => {
         await cargarDeudasDesdeSupabase();
     }
 
+    // 🌟 SISTEMA DE CAJÓN DE SEGURIDAD
     userButtons.forEach(button => {
-        button.addEventListener('click', async () => {
-            usuarioActivo = button.getAttribute('data-user');
-            localStorage.setItem('debt_mate_user', usuarioActivo);
-            userGreeting.textContent = `Hola, ${usuarioActivo}`;
-            loginScreen.classList.remove('active');
-            loginScreen.classList.add('hidden');
-            dashboardScreen.classList.remove('hidden');
-            dashboardScreen.classList.add('active');
-            activarNotificaciones(usuarioActivo);
-            await cargarDeudasDesdeSupabase();
+        button.addEventListener('click', () => {
+            const usuarioSeleccionado = button.getAttribute('data-user');
+            const drawer = document.getElementById(`drawer-${usuarioSeleccionado}`);
+            const input = document.getElementById(`pin-${usuarioSeleccionado}`);
+            
+            document.querySelectorAll('.pin-drawer').forEach(d => {
+                if (d !== drawer) {
+                    d.classList.remove('active');
+                    const otherInput = d.querySelector('.pin-input');
+                    if(otherInput) otherInput.value = '';
+                }
+            });
+
+            drawer.classList.toggle('active');
+            
+            if (drawer.classList.contains('active')) {
+                setTimeout(() => input.focus(), 350);
+            } else {
+                input.value = '';
+            }
+        });
+    });
+
+    // 🌟 EVALUADOR AUTOMÁTICO DEL PIN AL 4TO DÍGITO
+    document.querySelectorAll('.pin-input').forEach(input => {
+        input.addEventListener('input', async (e) => {
+            const usuario = input.id.split('-')[1]; 
+            const lockIcon = document.getElementById(`lock-${usuario}`);
+            const drawer = document.getElementById(`drawer-${usuario}`);
+            const pinCorrecto = usuario === 'Andy' ? PIN_ANDY : PIN_VICTORIA;
+
+            input.value = input.value.replace(/[^0-9]/g, '');
+
+            if (input.value.length === 4) {
+                input.blur(); 
+
+                if (input.value === pinCorrecto) {
+                    lockIcon.textContent = "🔓";
+                    lockIcon.classList.add('success');
+                    input.style.borderColor = "#2ECC71";
+                    input.style.color = "#2ECC71";
+
+                    setTimeout(async () => {
+                        usuarioActivo = usuario;
+                        localStorage.setItem('debt_mate_user', usuarioActivo);
+                        userGreeting.textContent = `Hola, ${usuarioActivo}`;
+                        loginScreen.classList.remove('active');
+                        loginScreen.classList.add('hidden');
+                        dashboardScreen.classList.remove('hidden');
+                        dashboardScreen.classList.add('active');
+                        activarNotificaciones(usuarioActivo);
+                        await cargarDeudasDesdeSupabase();
+                        
+                        drawer.classList.remove('active');
+                        input.value = '';
+                        lockIcon.textContent = "🔒";
+                        lockIcon.classList.remove('success');
+                        input.style.borderColor = "";
+                        input.style.color = "";
+                    }, 600);
+
+                } else {
+                    lockIcon.textContent = "🛑";
+                    drawer.classList.add('shake');
+                    input.style.borderColor = "#E74C3C";
+                    input.style.color = "#E74C3C";
+
+                    setTimeout(() => {
+                        drawer.classList.remove('shake');
+                        input.value = '';
+                        lockIcon.textContent = "🔒";
+                        input.style.borderColor = "#0B2B5E";
+                        input.style.color = "#0B2B5E";
+                        input.focus(); 
+                    }, 600);
+                }
+            }
         });
     });
 
@@ -234,7 +312,7 @@ window.registrarPago = async function(idDeuda) {
     const deuda = deudasGlobales.find(d => d.id == idDeuda);
     if (!deuda) return;
 
-    const confirmar = confirm(`¿Confirmas el pago de $${deuda.valor_cuota} para la deuda "${deuda.nombre_deuda}"?`);
+    const confirmar = confirm(`¿Confirmas el pago de $${formatearNumero(deuda.valor_cuota)} para la deuda "${deuda.nombre_deuda}"?`);
     if (!confirmar) return; 
 
     let nuevoSaldo = deuda.saldo_pendiente - deuda.valor_cuota;
@@ -279,7 +357,7 @@ async function cargarDeudasDesdeSupabase() {
     deudasGlobales = deudas; 
 
     if (!deudas || deudas.length === 0) {
-        totalDebtAmount.textContent = "$ 0.00";
+        totalDebtAmount.textContent = "$ 0,00";
         debtList.innerHTML = '<p style="color: #666; text-align: center;">No hay deudas registradas aún.</p>';
         alertStatus.textContent = "● Al día";
         alertStatus.style.backgroundColor = "rgba(46, 204, 113, 0.2)";
@@ -351,18 +429,18 @@ async function cargarDeudasDesdeSupabase() {
                         Cuotas: ${cuotasPagadas} de ${cuotasTotales}
                     </span>
                 </div>
-                <span style="color: #666666; font-size: 14px;">Saldo actual: $ ${deuda.saldo_pendiente.toFixed(2)}</span>
-                <span style="color: #B0B0B0; font-size: 11px; display: block;">(Monto original: $ ${deuda.monto_inicial.toFixed(2)})</span>
+                <span style="color: #666666; font-size: 14px;">Saldo actual: $ ${formatearNumero(deuda.saldo_pendiente)}</span>
+                <span style="color: #B0B0B0; font-size: 11px; display: block;">(Monto original: $ ${formatearNumero(deuda.monto_inicial)})</span>
                 ${estadoPagoHtml}
                 ${fechaFinText}
                 <button class="btn-pay" style="${styleBtn}" ${disabledBtn} onclick="registrarPago('${deuda.id}')">
-                    ✅ Pagar Cuota ($${deuda.valor_cuota})
+                    ✅ Pagar Cuota ($${formatearNumero(deuda.valor_cuota)})
                 </button>
             </div>
         `;
     });
 
-    totalDebtAmount.textContent = `$ ${sumaTotal.toFixed(2)}`;
+    totalDebtAmount.textContent = `$ ${formatearNumero(sumaTotal)}`;
     
     if (hayAlertas) {
         alertStatus.textContent = "● Pagos cercanos";
@@ -395,7 +473,7 @@ async function cargarHistorial() {
                     <span class="historial-fecha">${fechaForm}</span><br>
                     <span style="color: var(--primary-blue); font-size: 12px; font-weight: bold;">👤 Pagado por: ${nombrePagador}</span>
                 </div>
-                <div class="historial-monto">+$${pago.monto_pagado.toFixed(2)}</div>
+                <div class="historial-monto">+$${formatearNumero(pago.monto_pagado)}</div>
             </div>`;
     });
 }

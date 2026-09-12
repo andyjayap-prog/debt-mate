@@ -2,104 +2,189 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DEBT MATE</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Debt Mate</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="style.css">
+    <link rel="apple-touch-icon" href="icon.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="style.css?v=13">
+    <meta name="theme-color" content="#0B2B5E">
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- OneSignal -->
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
 </head>
 <body>
-    <div id="login-screen" class="screen active">
-        <div class="logo-container">
-            <h1>DEBT MATE</h1>
-            <p>Organizando los pagos de tu familia</p>
+    <!-- PANTALLA DE INICIO (LOGIN) -->
+    <div id="login-screen" class="active">
+        <div style="text-align: center; margin-bottom: 40px; margin-top: 50px;">
+            <h1 style="color: #0B2B5E; font-size: 36px; margin-bottom: 5px;">DEBT MATE</h1>
+            <p style="color: #666;">Organizando los pagos de tu familia</p>
         </div>
-        <div class="auth-actions">
-            <p style="color: var(--text-gray); font-size: 14px; margin-bottom: 5px;">Selecciona tu perfil</p>
-            <button class="btn-primary btn-user" data-user="Andy" style="margin-bottom: 5px;">👤 Entrar como Andy</button>
-            <button class="btn-primary btn-user" data-user="Victoria" style="background-color: #2C3E50;">👤 Entrar como Victoria</button>
+
+        <p style="text-align: center; color: #666; margin-bottom: 20px;">Selecciona tu perfil</p>
+        
+        <div class="user-selection" style="display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 300px; margin: 0 auto;">
+            <!-- Módulo Andy -->
+            <div class="user-card" style="width: 100%; margin-bottom: 15px;">
+                <button class="btn-user" data-user="Andy" style="width: 100%; z-index: 2; position: relative;">👤 Entrar como Andy</button>
+                <div id="drawer-Andy" class="pin-drawer">
+                    <span class="lock-icon" id="lock-Andy">🔒</span>
+                    <input type="password" inputmode="numeric" maxlength="4" class="pin-input" id="pin-Andy" placeholder="••••">
+                </div>
+            </div>
+
+            <!-- Módulo Victoria -->
+            <div class="user-card" style="width: 100%; margin-bottom: 15px;">
+                <button class="btn-user" data-user="Victoria" style="width: 100%; z-index: 2; position: relative;">👤 Entrar como Victoria</button>
+                <div id="drawer-Victoria" class="pin-drawer">
+                    <span class="lock-icon" id="lock-Victoria">🔒</span>
+                    <input type="password" inputmode="numeric" maxlength="4" class="pin-input" id="pin-Victoria" placeholder="••••">
+                </div>
+            </div>
         </div>
     </div>
 
-    <div id="dashboard-screen" class="screen hidden">
-        <header class="app-header">
+    <!-- PANTALLA PRINCIPAL (DASHBOARD) -->
+    <div id="dashboard-screen" class="hidden">
+        <header style="background-color: #0B2B5E; color: white; padding: 20px; border-radius: 0 0 20px 20px; display: flex; justify-content: space-between; align-items: center;">
             <div>
-                <span id="user-greeting">Hola, Andy</span>
+                <h2 id="user-greeting" style="margin: 0; font-size: 20px;">Hola</h2>
+                <span id="alert-status" style="font-size: 12px; padding: 3px 8px; border-radius: 10px; background: rgba(255,255,255,0.2);">● Calculando...</span>
             </div>
-            <div class="profile-icon" id="btn-logout" title="Cambiar de usuario" style="cursor: pointer;">👤</div>
+            <button id="btn-logout" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px 12px; border-radius: 8px; cursor: pointer;">Cerrar sesión</button>
         </header>
 
-        <section class="debt-summary">
-            <p>Total Deuda Familiar</p>
-            <h2 id="total-debt-amount">$ 0.00</h2>
-            <span class="status-badge" id="alert-status">● Al día</span>
-        </section>
+        <div style="padding: 20px;">
+            <div style="background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; margin-bottom: 20px;">
+                <p style="margin: 0; color: #666; font-size: 14px;">Total de Deuda Activa</p>
+                <h1 id="total-debt-amount" style="margin: 5px 0 0 0; color: #0B2B5E; font-size: 32px;">$ 0.00</h1>
+            </div>
 
-        <div class="action-buttons">
-            <button class="icon-btn" id="btn-historial">🕒 <span>Historial</span></button>
-            <button class="icon-btn" id="btn-new-debt">+ <span>Nueva Deuda</span></button>
+            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                <button id="btn-new-debt" style="flex: 1; background: #0B2B5E; color: white; border: none; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: bold;">+ Nueva Deuda</button>
+                <button id="btn-historial" style="flex: 1; background: white; color: #0B2B5E; border: 1px solid #0B2B5E; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: bold;">Historial</button>
+            </div>
+
+            <h3 style="color: #333; margin-bottom: 15px;">Tus Cuotas</h3>
+            <div id="debt-list" style="display: flex; flex-direction: column; gap: 15px;">
+                <!-- Aquí se inyectan las tarjetas desde JS -->
+            </div>
         </div>
-
-        <section class="debt-list-container">
-            <h3>Tus Deudas Activas</h3>
-            <div id="debt-list"></div>
-        </section>
     </div>
 
-    <!-- Modales -->
+    <!-- MODAL: NUEVA DEUDA -->
     <div id="modal-new-debt" class="modal hidden">
         <div class="modal-content">
-            <span class="close-btn" id="close-modal">&times;</span>
-            <h3 style="color: #0B2B5E; margin-bottom: 15px;">Registrar Deuda</h3>
-            <form id="form-new-debt" class="form-styled">
-                <input type="text" id="input-nombre" placeholder="Nombre de la deuda" required>
-                <input type="number" id="input-monto-original" placeholder="Monto original del préstamo" step="0.01" required>
-                <input type="number" id="input-saldo-actual" placeholder="Saldo pendiente actual" step="0.01" required>
-                <input type="number" id="input-cuotas-totales" placeholder="Total de cuotas del préstamo" required>
-                <input type="number" id="input-cuotas-pagadas" placeholder="Cuotas ya pagadas (0 si es nueva)" required>
-                <input type="number" id="input-valor" placeholder="Valor de cada cuota" step="0.01" required>
-                <input type="number" id="input-dia" placeholder="Día de pago mensual" min="1" max="31" required>
-                <button type="submit" class="btn-primary" style="margin-top: 15px;">Guardar Registro</button>
+            <h3 style="margin-top: 0; color: #0B2B5E;">Agregar Deuda</h3>
+            <form id="form-new-debt">
+                <label>Nombre de la deuda:</label>
+                <input type="text" id="input-nombre" required>
+                
+                <div style="display: flex; gap: 10px;">
+                    <div style="flex: 1;">
+                        <label>Monto Original ($):</label>
+                        <input type="number" step="0.01" id="input-monto-original" required>
+                    </div>
+                    <div style="flex: 1;">
+                        <label>Saldo Actual ($):</label>
+                        <input type="number" step="0.01" id="input-saldo-actual" required>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px;">
+                    <div style="flex: 1;">
+                        <label>Cuotas Totales:</label>
+                        <input type="number" id="input-cuotas-totales" required>
+                    </div>
+                    <div style="flex: 1;">
+                        <label>Cuotas Pagadas:</label>
+                        <input type="number" id="input-cuotas-pagadas" value="0" required>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px;">
+                    <div style="flex: 1;">
+                        <label>Valor por Cuota ($):</label>
+                        <input type="number" step="0.01" id="input-valor" required>
+                    </div>
+                    <div style="flex: 1;">
+                        <label>Día de Pago (1-31):</label>
+                        <input type="number" id="input-dia" min="1" max="31" required>
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="button" id="close-modal" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #ccc; background: white; cursor: pointer;">Cancelar</button>
+                    <button type="submit" style="flex: 1; padding: 10px; border-radius: 8px; border: none; background: #0B2B5E; color: white; cursor: pointer;">Guardar</button>
+                </div>
             </form>
         </div>
     </div>
 
+    <!-- MODAL: EDITAR DEUDA -->
     <div id="modal-edit-debt" class="modal hidden">
         <div class="modal-content">
-            <span class="close-btn" id="close-edit-modal">&times;</span>
-            <h3 style="color: #0B2B5E; margin-bottom: 15px;">Corregir Datos</h3>
-            <form id="form-edit-debt" class="form-styled">
+            <h3 style="margin-top: 0; color: #0B2B5E;">Editar Deuda</h3>
+            <form id="form-edit-debt">
                 <input type="hidden" id="edit-id">
-                <label class="form-label">Nombre de la deuda</label>
+                <label>Nombre de la deuda:</label>
                 <input type="text" id="edit-nombre" required>
-                <label class="form-label">Monto original</label>
-                <input type="number" id="edit-monto-original" step="0.01" required>
-                <label class="form-label">Saldo pendiente actual</label>
-                <input type="number" id="edit-saldo-actual" step="0.01" required>
-                <label class="form-label">Total de cuotas</label>
-                <input type="number" id="edit-cuotas-totales" required>
-                <label class="form-label">Cuotas ya pagadas</label>
-                <input type="number" id="edit-cuotas-pagadas" required>
-                <label class="form-label">Valor de cada cuota</label>
-                <input type="number" id="edit-valor" step="0.01" required>
-                <label class="form-label">Día de pago mensual</label>
-                <input type="number" id="edit-dia" min="1" max="31" required>
-                <button type="submit" class="btn-primary" style="margin-top: 15px;">Guardar Corrección</button>
+                
+                <div style="display: flex; gap: 10px;">
+                    <div style="flex: 1;">
+                        <label>Monto Original ($):</label>
+                        <input type="number" step="0.01" id="edit-monto-original" required>
+                    </div>
+                    <div style="flex: 1;">
+                        <label>Saldo Actual ($):</label>
+                        <input type="number" step="0.01" id="edit-saldo-actual" required>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px;">
+                    <div style="flex: 1;">
+                        <label>Cuotas Totales:</label>
+                        <input type="number" id="edit-cuotas-totales" required>
+                    </div>
+                    <div style="flex: 1;">
+                        <label>Cuotas Pagadas:</label>
+                        <input type="number" id="edit-cuotas-pagadas" required>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px;">
+                    <div style="flex: 1;">
+                        <label>Valor por Cuota ($):</label>
+                        <input type="number" step="0.01" id="edit-valor" required>
+                    </div>
+                    <div style="flex: 1;">
+                        <label>Día de Pago (1-31):</label>
+                        <input type="number" id="edit-dia" min="1" max="31" required>
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="button" id="close-edit-modal" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #ccc; background: white; cursor: pointer;">Cancelar</button>
+                    <button type="submit" style="flex: 1; padding: 10px; border-radius: 8px; border: none; background: #0B2B5E; color: white; cursor: pointer;">Guardar Cambios</button>
+                </div>
             </form>
         </div>
     </div>
 
+    <!-- MODAL: HISTORIAL -->
     <div id="modal-historial" class="modal hidden">
-        <div class="modal-content">
-            <span class="close-btn" id="close-historial">&times;</span>
-            <h3 style="color: #0B2B5E; margin-bottom: 15px;">Historial de Pagos</h3>
-            <div id="lista-historial" style="max-height: 350px; overflow-y: auto;"></div>
+        <div class="modal-content" style="max-height: 80vh; overflow-y: auto;">
+            <h3 style="margin-top: 0; color: #0B2B5E;">Historial de Pagos</h3>
+            <div id="lista-historial" style="display: flex; flex-direction: column; gap: 10px;">
+                <!-- Cargado desde JS -->
+            </div>
+            <button type="button" id="close-historial" style="width: 100%; margin-top: 20px; padding: 10px; border-radius: 8px; border: none; background: #0B2B5E; color: white; cursor: pointer;">Cerrar</button>
         </div>
     </div>
 
-    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app.js?v=13"></script>
+    <script src="app.js"></script>
 </body>
 </html>
