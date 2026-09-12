@@ -5,18 +5,21 @@ window.OneSignalDeferred.push(async function(OneSignal) {
     });
 });
 
+// 🧹 LIMPIADOR AUTOMÁTICO DE ENLACES (Borra etiquetas como ?utm_source...)
+if (window.history.replaceState && window.location.search) {
+    window.history.replaceState(null, '', window.location.pathname);
+}
+
 const SUPABASE_URL = 'https://izmdeqtzezqhkgfcrqgl.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_eR7ts_4u-KFvH6p0BsTRfA_n2RmCCcQ';
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// 🔒 CONFIGURACIÓN DE PINES DE SEGURIDAD
 const PIN_ANDY = "1020";
 const PIN_VICTORIA = "3040";
 
 let usuarioActivo = localStorage.getItem('debt_mate_user') || 'Familia';
 let deudasGlobales = [];
 
-// 💰 NUEVA FUNCIÓN: Traductor de formato de moneda (Ej: 20.345,23)
 function formatearNumero(valor) {
     return Number(valor).toLocaleString('es-ES', { 
         minimumFractionDigits: 2, 
@@ -92,7 +95,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         await cargarDeudasDesdeSupabase();
     }
 
-    // 🌟 SISTEMA DE CAJÓN DE SEGURIDAD
     userButtons.forEach(button => {
         button.addEventListener('click', () => {
             const usuarioSeleccionado = button.getAttribute('data-user');
@@ -117,7 +119,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
-    // 🌟 EVALUADOR AUTOMÁTICO DEL PIN AL 4TO DÍGITO
     document.querySelectorAll('.pin-input').forEach(input => {
         input.addEventListener('input', async (e) => {
             const usuario = input.id.split('-')[1]; 
@@ -347,6 +348,32 @@ async function cargarDeudasDesdeSupabase() {
     const debtList = document.getElementById('debt-list');
     const alertStatus = document.getElementById('alert-status');
 
+    // 🦴 MIENTRAS CARGA: Mostrar el esqueleto animado
+    debtList.innerHTML = `
+        <div class="skeleton-card">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                <div class="skeleton-line skeleton-title"></div>
+                <div class="skeleton-line" style="height: 18px; width: 60px; border-radius: 12px;"></div>
+            </div>
+            <div class="skeleton-line skeleton-text"></div>
+            <div class="skeleton-line skeleton-text-small"></div>
+            <div class="skeleton-line skeleton-btn"></div>
+        </div>
+        <div class="skeleton-card">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                <div class="skeleton-line skeleton-title"></div>
+                <div class="skeleton-line" style="height: 18px; width: 60px; border-radius: 12px;"></div>
+            </div>
+            <div class="skeleton-line skeleton-text"></div>
+            <div class="skeleton-line skeleton-text-small"></div>
+            <div class="skeleton-line skeleton-btn"></div>
+        </div>
+    `;
+    totalDebtAmount.innerHTML = '<span style="color: #ccc; font-size: 20px;">Calculando...</span>';
+    alertStatus.textContent = "● Sincronizando...";
+    alertStatus.style.backgroundColor = "rgba(11, 43, 94, 0.1)";
+    alertStatus.style.color = "#0B2B5E";
+
     const { data: deudas, error } = await supabaseClient
         .from('deudas')
         .select('*')
@@ -367,7 +394,7 @@ async function cargarDeudasDesdeSupabase() {
 
     let sumaTotal = 0;
     let hayAlertas = false;
-    debtList.innerHTML = '';
+    debtList.innerHTML = ''; 
 
     const hoy = new Date();
     hoy.setHours(0,0,0,0);
