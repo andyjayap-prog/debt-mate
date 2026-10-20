@@ -1,4 +1,10 @@
 {
+  "version": 2,
+  "functions": {
+    "api/despertador.js": {
+      "maxDuration": 10
+    }
+  },
   "crons": [
     {
       "path": "/api/despertador",
